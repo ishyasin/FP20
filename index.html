@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FP10 Manager 2</title>
+<link rel="stylesheet" href="shared/app.css"/>
+<style>
+  .hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .trust-logo { max-height: 64px; max-width: 260px; object-fit: contain; display: none; }
+  .tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+  .tool {
+    display: flex; flex-direction: column; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 24px; text-decoration: none; color: var(--text); box-shadow: var(--shadow);
+    border-top: 4px solid var(--accent);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    animation: fadeUp 0.45s ease both;
+  }
+  .tool:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(26,39,68,0.14); }
+  .tool.hnc { border-top-color: var(--green-brand); }
+  .tool:nth-child(2) { animation-delay: 0.06s; }
+  .tool:nth-child(3) { animation-delay: 0.12s; }
+  .tool .tag { font-size: 0.72em; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-hint); }
+  .tool h2 { margin: 0; font-size: 1.25em; font-weight: 800; color: var(--heading); }
+  .tool p { margin: 0; color: var(--text-muted); font-size: 0.9em; line-height: 1.6; flex: 1; }
+  .tool .go { font-weight: 700; font-size: 0.88em; color: var(--accent); }
+  .tool.hnc .go { color: #2e7d32; }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <div class="top-nav-inner">
+    <a class="brand" href="index.html">
+      <div class="brand-bar"></div>
+      <div class="brand-text">
+        <span class="brand-eyebrow">by ED&amp;G™</span>
+        <span class="brand-name">FP10 Manager <span class="accent">2</span></span>
+      </div>
+    </a>
+    <div class="nav-actions">
+      <button class="btn-nav" onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap">
+  <div class="card hero">
+    <div>
+      <div class="section-heading" style="margin:0;">
+        <div class="eyebrow" id="trustName">&nbsp;</div>
+        <h1>Welcome, <span class="accent" id="firstName"></span></h1>
+        <div class="heading-rule"></div>
+      </div>
+      <p class="subtitle" style="margin:12px 0 0;">Choose a tool to get started.</p>
+    </div>
+    <img class="trust-logo" id="trustLogo" alt="Trust logo"/>
+  </div>
+
+  <div class="tools">
+    <a class="tool hnc" href="hnc.html">
+      <span class="tag">Handwritten pads</span>
+      <h2>FP10HNC Manager</h2>
+      <p>Book out FP10HNC pads. Enter the first three serials of each pad to generate its cover sheet, tracking register and the pharmacy session log.</p>
+      <span class="go">Open →</span>
+    </a>
+    <a class="tool" href="ss.html#stack">
+      <span class="tag">FP10SS · Single sheets</span>
+      <h2>Stack Counter</h2>
+      <p>Count an unknown stack of FP10SS sheets from the first three serials and the last serial, then print the Pharmacy / Ward copy log.</p>
+      <span class="go">Open →</span>
+    </a>
+    <a class="tool" href="ss.html#pack-down">
+      <span class="tag">FP10SS · Single sheets</span>
+      <h2>Pack Down</h2>
+      <p>Split a box of 2000 into equal packs (e.g. 100, 200, 400). Get the exact first and last serial of every pack, with a session log and booking-out sheets.</p>
+      <span class="go">Open →</span>
+    </a>
+  </div>
+</main>
+
+<footer class="app-footer" data-app-footer></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="shared/fp10-api.js"></script>
+<script>
+  requirePage('user').then((me) => {
+    document.getElementById('firstName').textContent = me.first_name;
+    document.getElementById('trustName').textContent = me.trust ? me.trust.name : '';
+    if (me.trust && me.trust.logoUrl) {
+      const img = document.getElementById('trustLogo');
+      img.src = me.trust.logoUrl;
+      img.style.display = 'block';
+    }
+  });
+</script>
+</body>
+</html>

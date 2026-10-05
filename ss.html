@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FP10SS Manager — FP10 Manager 2</title>
+<link rel="stylesheet" href="shared/app.css"/>
+<style>
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .serial-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 640px) { .serial-grid { grid-template-columns: 1fr; } }
+  .pack-summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .pack-summary .chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 0.85em; color: var(--text-muted); }
+  .pack-summary .chip strong { color: var(--heading); font-size: 1.1em; }
+  #packTable td.num { text-align: center; font-weight: 700; color: var(--heading); }
+  #packTable td.serial { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.95em; }
+  #packTable input { min-width: 110px; }
+  .upper:not(:placeholder-shown), #packTable input:not(:placeholder-shown) { text-transform: uppercase; }
+  .downloads .item { border-left-color: var(--navy); }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <div class="top-nav-inner">
+    <a class="brand" href="index.html">
+      <div class="brand-bar"></div>
+      <div class="brand-text">
+        <span class="brand-eyebrow">FP10SS Manager · by ED&amp;G™</span>
+        <span class="brand-name">FP10 Manager <span class="accent">2</span></span>
+      </div>
+    </a>
+    <div class="nav-actions">
+      <a class="btn-nav" href="index.html">Home</a>
+      <button class="btn-nav" onclick="openModal('howToModal')">How to use</button>
+      <button class="btn-nav" onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="stack">Stack Counter</button>
+    <button class="tab" role="tab" data-tab="pack-down">Pack Down</button>
+  </div>
+
+  <!-- ════════════ STACK COUNTER ════════════ -->
+  <section class="panel" id="panel-stack">
+    <div class="grid-2">
+      <div class="card">
+        <div class="section-heading">
+          <div class="eyebrow">FP10SS</div>
+          <h1>Stack <span class="accent">Counter</span></h1>
+          <div class="heading-rule"></div>
+        </div>
+        <p class="subtitle">Count an unknown stack of FP10SS sheets without counting by hand. Enter the first three serial numbers from the top of the stack and the serial number of the bottom sheet.</p>
+        <div id="stackAlert"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Processed by</label>
+            <input type="text" class="processed-by" readonly value="–"/>
+          </div>
+          <div class="form-group">
+            <label for="stackDept">Department / FP10 code</label>
+            <input type="text" id="stackDept" placeholder="e.g. RYR123" maxlength="20" autocomplete="off"/>
+          </div>
+        </div>
+
+        <div class="section-heading section-heading--sm">
+          <div class="eyebrow">Top of stack</div>
+          <h3>First three <span class="accent">serial numbers</span></h3>
+          <div class="heading-rule"></div>
+        </div>
+        <div class="serial-grid">
+          <div class="form-group"><input type="text" class="serial" id="st1" placeholder="First serial" inputmode="numeric" maxlength="11" autocomplete="off"/></div>
+          <div class="form-group"><input type="text" class="serial" id="st2" placeholder="Second serial" inputmode="numeric" maxlength="11" autocomplete="off"/></div>
+          <div class="form-group"><input type="text" class="serial" id="st3" placeholder="Third serial" inputmode="numeric" maxlength="11" autocomplete="off"/></div>
+        </div>
+
+        <div class="section-heading section-heading--sm">
+          <div class="eyebrow">Bottom of stack</div>
+          <h3>Last <span class="accent">serial number</span></h3>
+          <div class="heading-rule"></div>
+        </div>
+        <div class="form-group" style="max-width:320px;"><input type="text" class="serial" id="stLast" placeholder="Last serial" inputmode="numeric" maxlength="11" autocomplete="off"/></div>
+
+        <button class="btn btn-primary" id="countBtn" disabled>Count sheets</button>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="section-heading section-heading--sm">
+            <h2>Your <span class="accent">result</span></h2>
+            <div class="heading-rule"></div>
+          </div>
+          <div class="empty-state" id="stackEmpty">Enter all four serial numbers and the department code, then click <strong>Count sheets</strong>.</div>
+          <div id="stackResult" style="display:none;">
+            <div class="result-box">
+              <div class="count" id="stackCount">0</div>
+              <div class="count-label">sheets in this stack</div>
+              <div class="detail" id="stackDetail"></div>
+            </div>
+            <div class="btn-row" style="margin-top:16px;" id="stackActions"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════ PACK DOWN ════════════ -->
+  <section class="panel" id="panel-pack-down">
+    <div class="card">
+      <div class="section-heading">
+        <div class="eyebrow">FP10SS</div>
+        <h1>Pack <span class="accent">Down</span></h1>
+        <div class="heading-rule"></div>
+      </div>
+      <p class="subtitle">Split a box of FP10SS sheets into equal packs. Enter the first three serials from the top of the box and the serial of the last sheet in the box. The system confirms the box count and works out the first and last serial (inclusive) of every pack.</p>
+      <div id="packAlert"></div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Processed by</label>
+          <input type="text" class="processed-by" readonly value="–"/>
+        </div>
+        <div class="form-group">
+          <label for="boxSize">Sheets in box</label>
+          <input type="number" id="boxSize" value="2000" min="2" max="5000" step="1"/>
+        </div>
+        <div class="form-group">
+          <label for="packSize">Pack size</label>
+          <select id="packSize"></select>
+        </div>
+      </div>
+
+      <div class="section-heading section-heading--sm">
+        <div class="eyebrow">Top of box</div>
+        <h3>First three <span class="accent">serial numbers</span></h3>
+        <div class="heading-rule"></div>
+      </div>
+      <div class="serial-grid">
+        <div class="form-group"><input type="text" class="serial" id="pk1" placeholder="First serial" inputmode="numeric" maxlength="11" autocomplete="off"/></div>
+        <div class="form-group"><input type="text" class="serial" id="pk2" placeholder="Second serial" inputmode="numeric" maxlength="11" autocomplete="off"/></div>
+        <div class="form-group"><input type="text" class="serial" id="pk3" placeholder="Third serial" inputmode="numeric" maxlength="11" autocomplete="off"/></div>
+      </div>
+
+      <div class="section-heading section-heading--sm">
+        <div class="eyebrow">Bottom of box</div>
+        <h3>Last <span class="accent">serial number</span></h3>
+        <div class="heading-rule"></div>
+      </div>
+      <div class="form-group" style="max-width:320px;"><input type="text" class="serial" id="pkLast" placeholder="Last serial" inputmode="numeric" maxlength="11" autocomplete="off"/></div>
+
+      <div class="section-heading section-heading--sm" style="margin-top:8px;">
+        <div class="eyebrow">Log &amp; booking out</div>
+        <h3>Cost <span class="accent">centre</span></h3>
+        <div class="heading-rule"></div>
+      </div>
+      <div class="form-group">
+        <label class="checkbox"><input type="checkbox" id="sameCostCentre" checked/> Same cost centre for all packs</label>
+      </div>
+      <div class="form-group" id="sharedCcGroup" style="max-width:320px;">
+        <input type="text" id="sharedCostCentre" placeholder="e.g. RYR123" maxlength="20" autocomplete="off" class="upper"/>
+      </div>
+      <p class="hint" id="perPackHint" style="display:none;margin-top:-6px;">Enter a cost centre for each pack in the table after calculating.</p>
+
+      <button class="btn btn-primary" id="calcPacksBtn" disabled>Calculate packs</button>
+    </div>
+
+    <div class="card" id="packResultCard" style="display:none;">
+      <div class="section-heading section-heading--sm">
+        <h2>Pack <span class="accent">ranges</span></h2>
+        <div class="heading-rule"></div>
+      </div>
+      <div class="pack-summary" id="packSummary"></div>
+      <div class="table-wrap">
+        <table class="data" id="packTable">
+          <thead><tr><th>Pack</th><th>First serial</th><th>Last serial</th><th>Sheets</th><th>Cost centre</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="packSubmitAlert" style="margin-top:14px;"></div>
+      <div class="btn-row" style="margin-top:16px;" id="packActions">
+        <button class="btn btn-primary" id="recordPackBtn">Record session &amp; get paperwork</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="app-footer" data-app-footer></footer>
+
+<div id="howToModal" class="modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="howToTitle">
+    <button class="modal-close" onclick="closeModal('howToModal')" aria-label="Close">&times;</button>
+    <h2 id="howToTitle">How to use FP10SS <span style="color:var(--accent);">Manager</span></h2>
+    <p><strong>Stack Counter</strong> counts a loose stack of unknown size.</p>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-body">Enter the department / FP10 code and the serial numbers of the <strong>first three sheets</strong> at the top of the stack, in order.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body">Enter the serial number of the <strong>last sheet</strong> at the bottom of the stack and click <strong>Count sheets</strong>.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-body">Click <strong>Record &amp; download log</strong>. The PDF has a Pharmacy Copy and a Ward Copy on one page.</div></div>
+    </div>
+    <p style="margin-top:18px;"><strong>Pack Down</strong> splits a full box (usually 2000) into equal packs in one session.</p>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-body">Check the box size and choose a pack size. Only sizes that divide the box exactly are offered.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body">Enter the first three serials from the top of the box and the serial of the last sheet in the box. The system confirms the box really holds that many sheets.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-body">Leave <strong>Same cost centre for all packs</strong> ticked and enter one code, or untick it and enter a code for each pack in the table.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-body">Click <strong>Calculate packs</strong>, check the ranges, then <strong>Record session &amp; get paperwork</strong> to download the session log and a booking-out sheet for every pack.</div></div>
+    </div>
+    <p style="margin-top:16px;">If the fields turn red, check the numbers were entered in order and that the last serial belongs to the same batch.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="shared/fp10-api.js"></script>
+<script src="shared/pdf.js"></script>
+<script>
+const PACK_SIZE_OPTIONS = [50, 100, 200, 250, 400, 500, 1000];
+
+let ME = null;
+let LOGO = null;
+
+const READY = requirePage('user').then(async (me) => {
+  ME = me;
+  document.querySelectorAll('.processed-by').forEach((el) => { el.value = me.fullName; });
+  LOGO = await loadLogoForPdf(me.trust && me.trust.logoUrl);
+});
+
+// ── General UI ─────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach((m) => m.classList.remove('open'));
+});
+document.querySelectorAll('.modal-overlay').forEach((m) => m.addEventListener('click', (e) => { if (e.target === m) m.classList.remove('open'); }));
+
+function setAlert(id, message, type = 'error') {
+  document.getElementById(id).innerHTML = message ? `<div class="alert alert-${type}">${escapeHtml(message)}</div>` : '';
+}
+
+function selectTab(name) {
+  if (!['stack', 'pack-down'].includes(name)) name = 'stack';
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('active', p.id === `panel-${name}`));
+  if (location.hash !== `#${name}`) history.replaceState(null, '', `#${name}`);
+}
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => selectTab(t.dataset.tab)));
+window.addEventListener('hashchange', () => selectTab(location.hash.slice(1)));
+selectTab(location.hash.slice(1));
+
+// Digits only, auto-advance after 11 digits.
+function wireSerials(inputs, onChange) {
+  inputs.forEach((input, i) => {
+    input.addEventListener('input', () => {
+      input.value = input.value.replace(/\D/g, '').slice(0, 11);
+      inputs.forEach((x) => x.classList.remove('valid', 'invalid'));
+      if (input.value.length === 11 && i < inputs.length - 1) {
+        inputs[i + 1].focus();
+        inputs[i + 1].select();
+      }
+      onChange();
+    });
+  });
+}
+
+function checkTopThree(inputs) {
+  const prefix = inputs[0].value.substring(0, 7);
+  return inputs.slice(1, 3).every((i) => i.value.startsWith(prefix));
+}
+
+async function withBusy(btn, label, fn) {
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `${label} <span class="spinner"></span>`;
+  try { return await fn(); } finally { btn.innerHTML = orig; btn.disabled = false; }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// STACK COUNTER
+// ══════════════════════════════════════════════════════════════════════════
+const stInputs = ['st1', 'st2', 'st3', 'stLast'].map((id) => document.getElementById(id));
+const stDept = document.getElementById('stackDept');
+const countBtn = document.getElementById('countBtn');
+let STACK = null;
+
+function resetStackResult() {
+  STACK = null;
+  document.getElementById('stackResult').style.display = 'none';
+  document.getElementById('stackEmpty').style.display = 'block';
+}
+
+wireSerials(stInputs, () => {
+  setAlert('stackAlert', '');
+  resetStackResult();
+  countBtn.disabled = !stInputs.every((i) => i.value.length === 11);
+});
+stDept.addEventListener('input', () => { stDept.classList.remove('invalid'); setAlert('stackAlert', ''); resetStackResult(); });
+
+countBtn.addEventListener('click', async () => {
+  setAlert('stackAlert', '');
+  stInputs.forEach((i) => i.classList.remove('valid', 'invalid'));
+  const dept = stDept.value.trim().toUpperCase();
+  if (!dept) { stDept.classList.add('invalid'); setAlert('stackAlert', 'Department / FP10 code is required for the log.'); stDept.focus(); return; }
+  if (!checkTopThree(stInputs)) {
+    stInputs.slice(0, 3).forEach((i) => i.classList.add('invalid'));
+    setAlert('stackAlert', "The first three serial numbers don't share the same batch prefix. Check they're entered in order from the top of the stack.");
+    return;
+  }
+  const [first, second, third, last] = stInputs.map((i) => i.value);
+  await withBusy(countBtn, 'Counting…', async () => {
+    try {
+      const { total } = await callFp10Logic('count-stack', { first, second, third, last });
+      stInputs.forEach((i) => i.classList.add('valid'));
+      STACK = { deptCode: dept, first, second, third, last, total, recorded: false };
+      renderStackResult();
+    } catch (err) {
+      stInputs.forEach((i) => i.classList.add('invalid'));
+      setAlert('stackAlert', err.message);
+    }
+  });
+});
+
+function renderStackResult() {
+  document.getElementById('stackEmpty').style.display = 'none';
+  document.getElementById('stackResult').style.display = 'block';
+  document.getElementById('stackCount').textContent = STACK.total;
+  document.getElementById('stackDetail').innerHTML =
+    `Dept code:    ${escapeHtml(STACK.deptCode)}<br>First serial: ${STACK.first}<br>Last serial:  ${STACK.last}`;
+  document.getElementById('stackDetail').style.whiteSpace = 'pre';
+  const actions = document.getElementById('stackActions');
+  if (!STACK.recorded) {
+    actions.innerHTML = '<button class="btn btn-primary" id="recordStackBtn" style="flex:1;">Record &amp; download log</button>';
+    document.getElementById('recordStackBtn').onclick = recordStack;
+  } else {
+    actions.innerHTML = `
+      <div class="alert alert-success" style="flex-basis:100%;margin:0 0 4px;">Recorded. The log has downloaded.</div>
+      <button class="btn btn-navy" id="redownloadStackBtn" style="flex:1;">Download log again</button>
+      <button class="btn btn-ghost" id="newStackBtn" style="flex:1;">New count</button>`;
+    document.getElementById('redownloadStackBtn').onclick = () => downloadStackLog();
+    document.getElementById('newStackBtn').onclick = newStack;
+  }
+}
+
+async function recordStack() {
+  const btn = document.getElementById('recordStackBtn');
+  await withBusy(btn, 'Recording…', async () => {
+    try {
+      const res = await callFp10Logic('submit-stack', {
+        first: STACK.first, second: STACK.second, third: STACK.third, last: STACK.last, deptCode: STACK.deptCode,
+      });
+      STACK.recorded = true;
+      STACK.total = res.total;
+      STACK.processedBy = res.processedBy;
+      STACK.date = formatDateGB(res.createdAt);
+      await downloadStackLog();
+    } catch (err) {
+      setAlert('stackAlert', err.message);
+    }
+  });
+  if (STACK && STACK.recorded) {
+    stInputs.forEach((i) => { i.value = ''; i.classList.remove('valid', 'invalid'); });
+    countBtn.disabled = true;
+    renderStackResult();
+  }
+}
+
+function newStack() {
+  stDept.value = '';
+  resetStackResult();
+  stInputs[0].focus();
+}
+
+async function downloadStackLog() {
+  await READY;
+  const pdf = newLandscapePdf();
+  drawBookingPage(pdf, 'FP10SS Log', [
+    ['Date generated:', STACK.date],
+    ['Dept / FP10 Code:', STACK.deptCode],
+    ['First Serial:', STACK.first],
+    ['Last Serial:', STACK.last],
+    ['Total FP10SS forms:', String(STACK.total)],
+    ['Processed by:', STACK.processedBy || ME.fullName],
+  ]);
+  pdf.save(`FP10SS_Stack_Count_Log_${safeFilePart(STACK.deptCode)}_${dateForFile()}.pdf`);
+}
+
+// One A4 landscape page, Pharmacy Copy on the left and Ward Copy on the
+// right, split by a dashed cut line.
+function drawBookingPage(pdf, title, rows) {
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const half = pageWidth / 2;
+  drawBookingHalf(pdf, title, 'Pharmacy Copy', rows, 0, half, pageHeight);
+  drawBookingHalf(pdf, title, 'Ward Copy', rows, half, half, pageHeight);
+  pdf.setDrawColor(120, 120, 120);
+  pdf.setLineWidth(0.4);
+  pdf.setLineDashPattern([3, 2], 0);
+  pdf.line(half, 5, half, pageHeight - 5);
+  pdf.setLineDashPattern([], 0);
+}
+
+function drawBookingHalf(pdf, title, copyLabel, rows, xOffset, halfWidth, pageHeight) {
+  const centerX = xOffset + halfWidth / 2;
+  const margin = 9;
+  const left = xOffset + margin;
+  const right = xOffset + halfWidth - margin;
+
+  drawLogo(pdf, LOGO, left, 8, 44, 12);
+
+  pdf.setFontSize(13);
+  pdf.setTextColor(0, 48, 135);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(title, centerX, 27, { align: 'center' });
+
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(228, 0, 120);
+  pdf.text(copyLabel, centerX, 33, { align: 'center' });
+
+  pdf.setDrawColor(200, 200, 200);
+  pdf.setLineWidth(0.2);
+  pdf.line(left, 37, right, 37);
+
+  let y = 46;
+  pdf.setFontSize(9.5);
+  rows.forEach(([label, value]) => {
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(90, 98, 120);
+    pdf.text(label, left, y);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(String(value), left + 38, y);
+    y += 7.5;
+  });
+
+  const tableWidth = right - left;
+  const tableMargin = { left, right: xOffset + halfWidth - right };
+  const grid = { lineColor: [0, 0, 0], lineWidth: 0.3 };
+  const head = { fillColor: [230, 243, 247], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, halign: 'center', ...grid };
+  const labelCol = { fontStyle: 'bold', fillColor: [247, 249, 252] };
+  pdf.autoTable({
+    startY: y + 2,
+    head: [['', 'Name', 'Reg number', 'Signature', 'Date']],
+    body: ['Checked by', 'Supplied by', 'Received by', 'Returned by'].map((r) => [r, '', '', '', '']),
+    margin: tableMargin,
+    tableWidth,
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 2.5, halign: 'left', valign: 'middle', minCellHeight: 11, ...grid },
+    headStyles: head,
+    columnStyles: { 0: { cellWidth: 26, ...labelCol }, 1: { cellWidth: 31 }, 2: { cellWidth: 22 }, 3: { cellWidth: 29 }, 4: { cellWidth: tableWidth - 108 } },
+  });
+  pdf.autoTable({
+    startY: pdf.lastAutoTable.finalY + 3,
+    body: [['Quantity returned', '', 'Date returned', '']],
+    margin: tableMargin,
+    tableWidth,
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 2.5, halign: 'left', valign: 'middle', minCellHeight: 11, ...grid },
+    columnStyles: { 0: { cellWidth: 30, ...labelCol }, 1: { cellWidth: 35 }, 2: { cellWidth: 28, ...labelCol }, 3: { cellWidth: tableWidth - 93 } },
+  });
+
+  pdf.setFontSize(10);
+  pdf.setTextColor(192, 0, 60);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Must be retained for 2 years from date of receipt', centerX, pageHeight - 9, { align: 'center', maxWidth: halfWidth - margin * 2 });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// PACK DOWN
+// ══════════════════════════════════════════════════════════════════════════
+const pkInputs = ['pk1', 'pk2', 'pk3', 'pkLast'].map((id) => document.getElementById(id));
+const boxSizeInput = document.getElementById('boxSize');
+const packSizeSelect = document.getElementById('packSize');
+const sameCcBox = document.getElementById('sameCostCentre');
+const sharedCcInput = document.getElementById('sharedCostCentre');
+const calcBtn = document.getElementById('calcPacksBtn');
+
+let PACK = null;
+
+function boxSize() { return parseInt(boxSizeInput.value, 10); }
+
+function fillPackSizes() {
+  const box = boxSize();
+  const previous = parseInt(packSizeSelect.value, 10) || 200;
+  const options = Number.isInteger(box) ? PACK_SIZE_OPTIONS.filter((p) => p < box && box % p === 0) : [];
+  packSizeSelect.innerHTML = options.length
+    ? options.map((p) => `<option value="${p}">${p} sheets → ${box / p} packs</option>`).join('')
+    : '<option value="">No standard pack size divides this box</option>';
+  if (options.includes(previous)) packSizeSelect.value = String(previous);
+  else if (options.includes(200)) packSizeSelect.value = '200';
+}
+
+function invalidatePacks() {
+  PACK = null;
+  document.getElementById('packResultCard').style.display = 'none';
+  setAlert('packSubmitAlert', '');
+  calcBtn.disabled = !(pkInputs.every((i) => i.value.length === 11) && packSizeSelect.value);
+}
+
+wireSerials(pkInputs, () => { setAlert('packAlert', ''); invalidatePacks(); });
+boxSizeInput.addEventListener('input', () => { fillPackSizes(); invalidatePacks(); });
+packSizeSelect.addEventListener('change', invalidatePacks);
+sharedCcInput.addEventListener('input', () => {
+  sharedCcInput.classList.remove('invalid');
+  if (PACK && !PACK.recorded) renderPackTable();
+});
+sameCcBox.addEventListener('change', () => {
+  document.getElementById('sharedCcGroup').style.display = sameCcBox.checked ? 'block' : 'none';
+  document.getElementById('perPackHint').style.display = sameCcBox.checked ? 'none' : 'block';
+  if (PACK && !PACK.recorded) renderPackTable();
+});
+
+calcBtn.addEventListener('click', async () => {
+  setAlert('packAlert', '');
+  pkInputs.forEach((i) => i.classList.remove('valid', 'invalid'));
+  if (!checkTopThree(pkInputs)) {
+    pkInputs.slice(0, 3).forEach((i) => i.classList.add('invalid'));
+    setAlert('packAlert', "The first three serial numbers don't share the same batch prefix. Check they're entered in order from the top of the box.");
+    return;
+  }
+  const [first, second, third, last] = pkInputs.map((i) => i.value);
+  const box = boxSize();
+  const packSize = parseInt(packSizeSelect.value, 10);
+  await withBusy(calcBtn, 'Calculating…', async () => {
+    try {
+      const { packs } = await callFp10Logic('pack-down', { first, second, third, last, boxSize: box, packSize });
+      pkInputs.forEach((i) => i.classList.add('valid'));
+      PACK = { first, second, third, last, boxSize: box, packSize, packs: packs.map((p) => ({ ...p, costCentre: '' })), recorded: false };
+      renderPackTable();
+      document.getElementById('packResultCard').style.display = 'block';
+      document.getElementById('packResultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (err) {
+      pkInputs.forEach((i) => i.classList.add('invalid'));
+      setAlert('packAlert', err.message);
+    }
+  });
+});
+
+function renderPackTable() {
+  const same = sameCcBox.checked;
+  const shared = sharedCcInput.value.trim().toUpperCase();
+  document.getElementById('packSummary').innerHTML = `
+    <div class="chip">Box <strong>${PACK.boxSize}</strong> sheets</div>
+    <div class="chip"><strong>${PACK.packs.length}</strong> packs of <strong>${PACK.packSize}</strong></div>
+    <div class="chip">Box range <span class="mono">${PACK.packs[0].first} → ${PACK.packs[PACK.packs.length - 1].last}</span></div>`;
+
+  const tbody = document.querySelector('#packTable tbody');
+  tbody.innerHTML = PACK.packs.map((p, i) => {
+    let cc;
+    if (PACK.recorded) cc = `<strong>${escapeHtml(p.costCentre)}</strong>`;
+    else if (same) cc = shared ? `<strong>${escapeHtml(shared)}</strong>` : '<span style="color:var(--text-hint);">Enter above</span>';
+    else cc = `<input type="text" data-pack="${i}" value="${escapeHtml(p.costCentre)}" maxlength="20" placeholder="Cost centre" autocomplete="off"/>`;
+    return `<tr>
+      <td class="num">${p.seq}</td>
+      <td class="serial">${p.first}</td>
+      <td class="serial">${p.last}</td>
+      <td>${p.count}</td>
+      <td>${cc}</td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('input[data-pack]').forEach((input) => {
+    input.addEventListener('input', () => {
+      input.classList.remove('invalid');
+      PACK.packs[Number(input.dataset.pack)].costCentre = input.value.trim().toUpperCase();
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const next = tbody.querySelector(`input[data-pack="${Number(input.dataset.pack) + 1}"]`);
+        if (next) { e.preventDefault(); next.focus(); }
+      }
+    });
+  });
+}
+
+function bindRecordButton() {
+  document.getElementById('recordPackBtn').onclick = recordPackDown;
+}
+bindRecordButton();
+
+async function recordPackDown() {
+  setAlert('packSubmitAlert', '');
+  const same = sameCcBox.checked;
+  let codes;
+  if (same) {
+    const shared = sharedCcInput.value.trim().toUpperCase();
+    if (!shared) {
+      sharedCcInput.classList.add('invalid');
+      setAlert('packSubmitAlert', 'Enter the cost centre for all packs.');
+      sharedCcInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    codes = [shared];
+  } else {
+    const missing = PACK.packs.findIndex((p) => !p.costCentre);
+    if (missing !== -1) {
+      const input = document.querySelector(`input[data-pack="${missing}"]`);
+      if (input) { input.classList.add('invalid'); input.focus(); }
+      setAlert('packSubmitAlert', `Enter a cost centre for pack ${missing + 1}.`);
+      return;
+    }
+    codes = PACK.packs.map((p) => p.costCentre);
+  }
+
+  const btn = document.getElementById('recordPackBtn');
+  await withBusy(btn, 'Recording…', async () => {
+    try {
+      const res = await callFp10Logic('submit-packdown', {
+        first: PACK.first, second: PACK.second, third: PACK.third, last: PACK.last,
+        boxSize: PACK.boxSize, packSize: PACK.packSize,
+        sameCostCentre: same, costCentres: codes,
+      });
+      PACK.packs = res.packs;
+      PACK.recorded = true;
+      PACK.sameCostCentre = same;
+      PACK.processedBy = res.processedBy;
+      PACK.date = formatDateGB(res.createdAt);
+    } catch (err) {
+      setAlert('packSubmitAlert', err.message);
+    }
+  });
+
+  if (!PACK.recorded) return;
+  renderPackTable();
+  pkInputs.forEach((i) => { i.disabled = true; });
+  [boxSizeInput, packSizeSelect, sameCcBox, sharedCcInput].forEach((el) => { el.disabled = true; });
+  calcBtn.disabled = true;
+  setAlert('packSubmitAlert', `Session recorded: ${PACK.packs.length} packs of ${PACK.packSize}. Download the paperwork below.`, 'success');
+  document.getElementById('packActions').innerHTML = `
+    <div class="downloads" style="flex-basis:100%;">
+      <div class="item">
+        <div class="item-row">
+          <div><strong>Pack down session log</strong><div class="mono">Pharmacy copy · all ${PACK.packs.length} packs</div></div>
+          <button class="btn btn-navy btn-sm" id="dlPackLog">Download log (PDF)</button>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-row">
+          <div><strong>Booking-out sheets</strong><div class="mono">One page per pack · Pharmacy &amp; Ward copy</div></div>
+          <button class="btn btn-primary btn-sm" id="dlPackSheets">Download sheets (PDF)</button>
+        </div>
+      </div>
+    </div>
+    <div id="newPackWrap" style="flex-basis:100%;text-align:center;margin-top:8px;">
+      <button class="btn btn-ghost" id="newPackBtn">Start a new pack down</button>
+    </div>`;
+  document.getElementById('dlPackLog').onclick = (e) => pdfButton(e.currentTarget, downloadPackLog);
+  document.getElementById('dlPackSheets').onclick = (e) => pdfButton(e.currentTarget, downloadPackSheets);
+  document.getElementById('newPackBtn').onclick = newPackDown;
+}
+
+async function pdfButton(btn, fn) {
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = 'Generating… <span class="spinner"></span>';
+  try {
+    await READY;
+    fn();
+    btn.innerHTML = '✓ Downloaded';
+  } catch (err) {
+    setAlert('packSubmitAlert', 'Could not generate the PDF: ' + err.message);
+  }
+  setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 1800);
+}
+
+function newPackDown() {
+  pkInputs.forEach((i) => { i.disabled = false; i.value = ''; i.classList.remove('valid', 'invalid'); });
+  [boxSizeInput, packSizeSelect, sameCcBox, sharedCcInput].forEach((el) => { el.disabled = false; });
+  sharedCcInput.value = '';
+  document.getElementById('packActions').innerHTML = '<button class="btn btn-primary" id="recordPackBtn">Record session &amp; get paperwork</button>';
+  bindRecordButton();
+  invalidatePacks();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  pkInputs[0].focus();
+}
+
+function packCostCentreLabel() {
+  return PACK.sameCostCentre ? PACK.packs[0].costCentre : 'Multiple';
+}
+
+function downloadPackLog() {
+  const pdf = newLandscapePdf();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const n = PACK.packs.length;
+
+  drawLogo(pdf, LOGO, 10, 10, 60, 16);
+
+  pdf.setFontSize(16);
+  pdf.setTextColor(46, 94, 158);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('FP10SS Pack Down Session Log - Pharmacy Copy', pageWidth / 2, 35, { align: 'center' });
+
+  if (PACK.sameCostCentre) {
+    pdf.setFontSize(22);
+    pdf.setTextColor(232, 23, 110);
+    pdf.text(PACK.packs[0].costCentre, pageWidth - 10, 20, { align: 'right' });
+  }
+
+  pdf.setFontSize(10);
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`Session Date: ${PACK.date}`, 10, 48);
+  pdf.text(`Processed By: ${PACK.processedBy}`, 10, 55);
+  pdf.text(`Box: ${PACK.boxSize} sheets  (${PACK.packs[0].first} - ${PACK.packs[n - 1].last})`, 10, 62);
+  pdf.text(`Packs: ${n} x ${PACK.packSize} sheets`, 150, 48);
+  pdf.text(`Cost centre: ${packCostCentreLabel()}`, 150, 55);
+
+  const ph = { textColor: [170, 170, 170], fontStyle: 'italic' };
+  const body = [];
+  PACK.packs.forEach((p) => {
+    body.push([
+      { content: `${p.seq} of ${n}`, rowSpan: 3 },
+      { content: p.costCentre, rowSpan: 3 },
+      { content: p.first, rowSpan: 3 },
+      { content: p.last, rowSpan: 3 },
+      { content: p.count, rowSpan: 3 },
+      { content: 'Name & Reg', styles: ph },
+      { content: 'Name & Reg', styles: ph },
+      { content: '', rowSpan: 3 },
+      { content: 'Name & Reg', styles: ph },
+      { content: 'Name & Reg', styles: ph },
+    ]);
+    body.push([{ content: 'Signature', styles: ph }, { content: 'Signature', styles: ph }, { content: 'Signature', styles: ph }, { content: 'Signature', styles: ph }]);
+    body.push([{ content: 'Date', styles: ph }, { content: 'Date', styles: ph }, { content: 'Date', styles: ph }, { content: 'Date', styles: ph }]);
+  });
+
+  pdf.autoTable({
+    startY: 68,
+    head: [['Pack', 'Cost Centre', 'First Serial', 'Last Serial', 'Sheets', 'Checked by', 'Received by', 'Quantity\nReturned', 'Returned by', 'Received into\npharm by']],
+    body,
+    rowPageBreak: 'avoid',
+    margin: { top: 30, left: 10, right: 10, bottom: 14 },
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 3, halign: 'left', valign: 'middle', lineColor: [0, 0, 0], lineWidth: 0.3, overflow: 'linebreak', minCellHeight: 8 },
+    headStyles: { fillColor: [230, 243, 247], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center', valign: 'middle', fontSize: 8, lineColor: [0, 0, 0], lineWidth: 0.3, minCellHeight: 10 },
+    columnStyles: { 0: { cellWidth: 18, halign: 'center' }, 1: { cellWidth: 24 }, 2: { cellWidth: 27 }, 3: { cellWidth: 27 }, 4: { cellWidth: 16, halign: 'center' }, 5: { cellWidth: 35 }, 6: { cellWidth: 35 }, 7: { cellWidth: 22, halign: 'center' }, 8: { cellWidth: 35 }, 9: { cellWidth: 38 } },
+    didDrawPage: (data) => {
+      if (data.pageNumber > 1) {
+        drawLogo(pdf, LOGO, 10, 8, 48, 13);
+        pdf.setFontSize(11);
+        pdf.setTextColor(46, 94, 158);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('FP10SS Pack Down Session Log - Pharmacy Copy (continued)', pageWidth / 2, 18, { align: 'center' });
+      }
+      pdf.setFontSize(8);
+      pdf.setTextColor(100, 100, 100);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Box ${PACK.packs[0].first} - ${PACK.packs[n - 1].last} | Page ${pdf.internal.getNumberOfPages()}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+    },
+  });
+
+  pdf.save(`FP10SS_Pack_Down_Log_${safeFilePart(packCostCentreLabel())}_${PACK.packs[0].first}_${dateForFile()}.pdf`);
+}
+
+function downloadPackSheets() {
+  const pdf = newLandscapePdf();
+  const n = PACK.packs.length;
+  PACK.packs.forEach((p, i) => {
+    if (i > 0) pdf.addPage();
+    drawBookingPage(pdf, 'FP10SS Booking Out Sheet', [
+      ['Date generated:', PACK.date],
+      ['Cost centre:', p.costCentre],
+      ['Pack:', `${p.seq} of ${n}`],
+      ['First Serial:', p.first],
+      ['Last Serial:', p.last],
+      ['Total FP10SS forms:', String(p.count)],
+      ['Processed by:', PACK.processedBy],
+    ]);
+  });
+  pdf.save(`FP10SS_Booking_Out_Sheets_${safeFilePart(packCostCentreLabel())}_${PACK.packs[0].first}_${dateForFile()}.pdf`);
+}
+
+fillPackSizes();
+invalidatePacks();
+</script>
+</body>
+</html>

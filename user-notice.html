@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>User notice — FP10 Manager 2</title>
+<link rel="stylesheet" href="shared/app.css"/>
+<style>
+  .notice p, .notice li { color: var(--text-muted); line-height: 1.7; font-size: 0.95em; }
+  .notice h3 { color: var(--heading); font-size: 1em; margin: 22px 0 6px; }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <div class="top-nav-inner">
+    <a class="brand" href="index.html">
+      <div class="brand-bar"></div>
+      <div class="brand-text">
+        <span class="brand-eyebrow">by ED&amp;G™</span>
+        <span class="brand-name">FP10 Manager <span class="accent">2</span></span>
+      </div>
+    </a>
+    <div class="nav-actions">
+      <a class="btn-nav" href="index.html">Back</a>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap" style="max-width:760px;">
+  <div class="card notice">
+    <div class="section-heading">
+      <div class="eyebrow">Please read</div>
+      <h1>User <span class="accent">notice</span></h1>
+      <div class="heading-rule"></div>
+    </div>
+
+    <p><strong>FP10 Manager 2</strong> is developed and owned by <strong>ED&amp;G™ (Evolve Digital and Governance)</strong>. It is provided to authorised organisations for managing FP10HNC and FP10SS controlled stationery.</p>
+
+    <h3>Authorised use</h3>
+    <p>Access is for staff given a User ID by their organisation's administrator. Do not share your User ID or passcode. Every record you create is logged under your name.</p>
+
+    <h3>Your responsibility</h3>
+    <p>The tool calculates serial ranges and sheet counts from the numbers you enter. Always check the printed paperwork against the physical forms and follow your organisation's controlled stationery procedures, including wet-ink signatures where required.</p>
+
+    <h3>Data</h3>
+    <p>The tool records FP10 serial ranges, sheet counts, cost centres, and the name of the person who created each record. It does not record patient information.</p>
+
+    <h3>Ownership</h3>
+    <p>The software, its design and its calculation methods remain the property of ED&amp;G™. You must not copy, reverse-engineer or redistribute any part of it.</p>
+
+    <h3>Support</h3>
+    <p>Contact <a href="mailto:support@edandg.com">support@edandg.com</a>.</p>
+
+    <p class="hint" style="margin-top:24px;">This notice is interim and will be replaced by full terms of use.</p>
+  </div>
+</main>
+
+<footer class="app-footer" data-app-footer></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="shared/fp10-api.js"></script>
+</body>
+</html>

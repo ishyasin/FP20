@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin — FP10 Manager 2</title>
+<link rel="stylesheet" href="shared/app.css"/>
+<style>
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .logo-thumb { width: 96px; height: 40px; object-fit: contain; background: #fff; border: 1px solid var(--border); border-radius: 4px; display: block; }
+  .logo-none { width: 96px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 0.75em; color: var(--text-hint); border: 1px dashed var(--border); border-radius: 4px; }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .inline-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; align-items: end; }
+  .inline-form .form-group { margin-bottom: 0; }
+  .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 16px; }
+  .toolbar .form-group { margin-bottom: 0; min-width: 160px; }
+  .passcode-reveal { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 1.15em; font-weight: 700; letter-spacing: 0.06em; background: var(--surface2); border: 1px dashed var(--accent); border-radius: 6px; padding: 10px 14px; display: inline-block; margin: 6px 0; color: var(--heading); }
+  .tool-hnc { color: #2e7d32; font-weight: 700; }
+  .tool-ss { color: var(--accent); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <div class="top-nav-inner">
+    <a class="brand" href="admin.html">
+      <div class="brand-bar"></div>
+      <div class="brand-text">
+        <span class="brand-eyebrow">Admin panel · by ED&amp;G™</span>
+        <span class="brand-name">FP10 Manager <span class="accent">2</span></span>
+      </div>
+    </a>
+    <div class="nav-actions">
+      <span class="btn-nav" style="cursor:default;border-color:transparent;" id="adminName"></span>
+      <button class="btn-nav" onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab" data-tab="trusts">Trusts</button>
+    <button class="tab" data-tab="users">Users</button>
+    <button class="tab" data-tab="activity">Activity</button>
+  </div>
+  <div id="pageAlert"></div>
+
+  <!-- ════════════ TRUSTS ════════════ -->
+  <section class="panel" id="panel-trusts">
+    <div class="card">
+      <div class="section-heading section-heading--sm">
+        <div class="eyebrow">New</div>
+        <h2>Create a <span class="accent">trust</span></h2>
+        <div class="heading-rule"></div>
+      </div>
+      <form id="createTrustForm" class="inline-form">
+        <div class="form-group" style="grid-column: span 2;">
+          <label for="newTrustName">Trust name</label>
+          <input type="text" id="newTrustName" maxlength="60" placeholder="e.g. Example NHS Foundation Trust" required/>
+        </div>
+        <button type="submit" class="btn btn-primary">Create trust</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="section-heading section-heading--sm">
+        <h2>All <span class="accent">trusts</span></h2>
+        <div class="heading-rule"></div>
+      </div>
+      <p class="subtitle">Logos appear on every PDF the trust's users generate. Upload a PNG, JPG or SVG; it is converted to PNG automatically. A wide logo with a transparent or white background works best.</p>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Logo</th><th>Trust</th><th>Users</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="trustRows"><tr><td colspan="5" class="empty-state">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <input type="file" id="logoFile" accept="image/png,image/jpeg,image/svg+xml" style="display:none;"/>
+    </div>
+  </section>
+
+  <!-- ════════════ USERS ════════════ -->
+  <section class="panel" id="panel-users">
+    <div class="card">
+      <div class="section-heading section-heading--sm">
+        <div class="eyebrow">New</div>
+        <h2>Create a <span class="accent">user</span></h2>
+        <div class="heading-rule"></div>
+      </div>
+      <form id="createUserForm" class="inline-form" autocomplete="off">
+        <div class="form-group">
+          <label for="cuTrust">Trust</label>
+          <select id="cuTrust" required></select>
+        </div>
+        <div class="form-group">
+          <label for="cuFirst">First name</label>
+          <input type="text" id="cuFirst" maxlength="60" required/>
+        </div>
+        <div class="form-group">
+          <label for="cuLast">Last name</label>
+          <input type="text" id="cuLast" maxlength="60" required/>
+        </div>
+        <div class="form-group">
+          <label for="cuUserId">User ID</label>
+          <input type="text" id="cuUserId" maxlength="32" placeholder="e.g. jsmith" autocapitalize="off" spellcheck="false" required/>
+        </div>
+        <div class="form-group">
+          <label for="cuPasscode">Temporary passcode</label>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="cuPasscode" minlength="8" maxlength="72" required/>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('cuPasscode').value = makePasscode()" title="Generate">↻</button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Create user</button>
+      </form>
+      <p class="hint" style="margin-top:10px;">The user is asked to choose their own passcode the first time they sign in.</p>
+    </div>
+
+    <div class="card">
+      <div class="section-heading section-heading--sm">
+        <h2>Users</h2>
+        <div class="heading-rule"></div>
+      </div>
+      <div class="toolbar">
+        <div class="form-group">
+          <label for="userTrustFilter">Trust</label>
+          <select id="userTrustFilter"></select>
+        </div>
+        <div class="form-group" style="flex:1;max-width:280px;">
+          <label for="userSearch">Search</label>
+          <input type="text" id="userSearch" placeholder="Name or User ID"/>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Name</th><th>User ID</th><th>Trust</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="userRows"><tr><td colspan="5" class="empty-state">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════ ACTIVITY ════════════ -->
+  <section class="panel" id="panel-activity">
+    <div class="card">
+      <div class="section-heading section-heading--sm">
+        <h2>Register <span class="accent">activity</span></h2>
+        <div class="heading-rule"></div>
+      </div>
+      <form class="toolbar" id="activityFilters">
+        <div class="form-group">
+          <label for="actTrust">Trust</label>
+          <select id="actTrust"></select>
+        </div>
+        <div class="form-group">
+          <label for="actTool">Tool</label>
+          <select id="actTool">
+            <option value="">All tools</option>
+            <option value="hnc">FP10HNC</option>
+            <option value="ss_stack">FP10SS Stack Counter</option>
+            <option value="ss_packdown">FP10SS Pack Down</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="actFrom">From</label>
+          <input type="date" id="actFrom"/>
+        </div>
+        <div class="form-group">
+          <label for="actTo">To</label>
+          <input type="date" id="actTo"/>
+        </div>
+        <div class="form-group">
+          <label for="actSerial">Find serial</label>
+          <input type="text" id="actSerial" class="serial" inputmode="numeric" maxlength="11" placeholder="11 digits"/>
+        </div>
+        <button type="submit" class="btn btn-navy">Apply</button>
+        <button type="button" class="btn btn-ghost" id="exportCsvBtn">Export CSV</button>
+      </form>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Date</th><th>Trust</th><th>Tool</th><th>#</th><th>Cost centre</th><th>First serial</th><th>Last serial</th><th>Sheets</th><th>By</th></tr></thead>
+          <tbody id="activityRows"><tr><td colspan="9" class="empty-state">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <p class="hint" style="margin-top:10px;">Shows the most recent 500 matching records.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="app-footer" data-app-footer></footer>
+
+<!-- Edit user -->
+<div id="editUserModal" class="modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <button class="modal-close" onclick="closeModal('editUserModal')" aria-label="Close">&times;</button>
+    <h2>Edit <span style="color:var(--accent);">user</span></h2>
+    <div id="editUserAlert"></div>
+    <form id="editUserForm">
+      <div class="form-row">
+        <div class="form-group"><label for="euFirst">First name</label><input type="text" id="euFirst" maxlength="60" required/></div>
+        <div class="form-group"><label for="euLast">Last name</label><input type="text" id="euLast" maxlength="60" required/></div>
+      </div>
+      <div class="form-group"><label for="euTrust">Trust</label><select id="euTrust" required></select></div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button type="button" class="btn btn-secondary" style="flex:1;" onclick="closeModal('editUserModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex:1;">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Reset passcode -->
+<div id="resetModal" class="modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <button class="modal-close" onclick="closeModal('resetModal')" aria-label="Close">&times;</button>
+    <h2>Reset <span style="color:var(--accent);">passcode</span></h2>
+    <div id="resetAlert"></div>
+    <p id="resetFor"></p>
+    <form id="resetForm">
+      <div class="form-group">
+        <label for="rpPasscode">New temporary passcode</label>
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="rpPasscode" minlength="8" maxlength="72" required/>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('rpPasscode').value = makePasscode()">↻</button>
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button type="button" class="btn btn-secondary" style="flex:1;" onclick="closeModal('resetModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex:1;">Reset passcode</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Rename trust -->
+<div id="renameModal" class="modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <button class="modal-close" onclick="closeModal('renameModal')" aria-label="Close">&times;</button>
+    <h2>Rename <span style="color:var(--accent);">trust</span></h2>
+    <div id="renameAlert"></div>
+    <form id="renameForm">
+      <div class="form-group"><label for="rnName">Trust name</label><input type="text" id="rnName" maxlength="60" required/></div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button type="button" class="btn btn-secondary" style="flex:1;" onclick="closeModal('renameModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex:1;">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Confirm -->
+<div id="confirmModal" class="modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width:440px;">
+    <h2 id="confirmTitle">Confirm</h2>
+    <p id="confirmText"></p>
+    <div class="btn-row" style="margin-top:16px;">
+      <button type="button" class="btn btn-secondary" style="flex:1;" id="confirmNo">Cancel</button>
+      <button type="button" class="btn btn-danger" style="flex:1;" id="confirmYes">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Show credentials -->
+<div id="credsModal" class="modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width:460px;">
+    <button class="modal-close" onclick="closeModal('credsModal')" aria-label="Close">&times;</button>
+    <h2>Sign-in <span style="color:var(--accent);">details</span></h2>
+    <p>Give these to the user securely. They will be asked to choose their own passcode at first sign-in. The passcode is not shown again.</p>
+    <div><span class="label">User</span><strong id="credsName"></strong></div>
+    <div style="margin-top:10px;"><span class="label">User ID</span><span class="passcode-reveal" id="credsUserId"></span></div>
+    <div style="margin-top:6px;"><span class="label">Temporary passcode</span><span class="passcode-reveal" id="credsPasscode"></span></div>
+    <div class="btn-row" style="margin-top:18px;">
+      <button class="btn btn-ghost" style="flex:1;" id="copyCredsBtn">Copy</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="closeModal('credsModal')">Done</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="shared/fp10-api.js"></script>
+<script>
+let TRUSTS = [];
+let USERS = [];
+let ACTIVITY = [];
+let logoTargetTrust = null;
+let editingUser = null;
+let resettingUser = null;
+let renamingTrust = null;
+
+const TOOL_LABELS = { hnc: 'FP10HNC', ss_stack: 'SS Stack Count', ss_packdown: 'SS Pack Down' };
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach((m) => m.classList.remove('open'));
+});
+
+function setAlert(id, message, type = 'error') {
+  const el = document.getElementById(id);
+  el.innerHTML = message ? `<div class="alert alert-${type}">${escapeHtml(message)}</div>` : '';
+  if (message && id === 'pageAlert') {
+    clearTimeout(setAlert.t);
+    setAlert.t = setTimeout(() => { el.innerHTML = ''; }, type === 'error' ? 8000 : 4000);
+  }
+}
+
+function confirmDialog(title, text, yesLabel = 'Confirm') {
+  return new Promise((resolve) => {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmText').textContent = text;
+    const yes = document.getElementById('confirmYes');
+    const no = document.getElementById('confirmNo');
+    yes.textContent = yesLabel;
+    const done = (v) => { closeModal('confirmModal'); yes.onclick = null; no.onclick = null; resolve(v); };
+    yes.onclick = () => done(true);
+    no.onclick = () => done(false);
+    openModal('confirmModal');
+  });
+}
+
+async function busy(btn, fn) {
+  const orig = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+  try { return await fn(); } finally { if (btn) { btn.innerHTML = orig; btn.disabled = false; } }
+}
+
+function makePasscode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = new Uint32Array(10);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => chars[b % chars.length]).join('');
+}
+
+function trustName(id) {
+  const t = TRUSTS.find((x) => x.id === id);
+  return t ? t.name : '–';
+}
+
+function selectTab(name) {
+  if (!['trusts', 'users', 'activity'].includes(name)) name = 'trusts';
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('active', p.id === `panel-${name}`));
+  if (location.hash !== `#${name}`) history.replaceState(null, '', `#${name}`);
+  if (name === 'activity' && !ACTIVITY.length) loadActivity();
+}
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => selectTab(t.dataset.tab)));
+window.addEventListener('hashchange', () => selectTab(location.hash.slice(1)));
+
+// ── Trusts ─────────────────────────────────────────────────────────────────
+async function loadTrusts() {
+  const { trusts } = await callAdmin('list-trusts');
+  TRUSTS = trusts;
+  const paths = trusts.filter((t) => t.logo_path).map((t) => t.logo_path);
+  const urls = {};
+  if (paths.length) {
+    const { data } = await supabaseClient.storage.from('trust-logos').createSignedUrls(paths, 600);
+    (data || []).forEach((d) => { if (d.signedUrl) urls[d.path] = d.signedUrl; });
+  }
+  TRUSTS.forEach((t) => { t.logoUrl = t.logo_path ? urls[t.logo_path] : null; });
+  renderTrusts();
+  fillTrustSelects();
+}
+
+function renderTrusts() {
+  const tbody = document.getElementById('trustRows');
+  if (!TRUSTS.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No trusts yet. Create one above.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = TRUSTS.map((t) => `
+    <tr>
+      <td>${t.logoUrl ? `<img class="logo-thumb" src="${escapeHtml(t.logoUrl)}" alt="">` : '<div class="logo-none">No logo</div>'}</td>
+      <td><strong>${escapeHtml(t.name)}</strong></td>
+      <td>${t.user_count}</td>
+      <td>${t.active ? '<span class="badge badge-on">Active</span>' : '<span class="badge badge-off">Suspended</span>'}</td>
+      <td><div class="actions">
+        <button class="btn btn-navy btn-sm" onclick="chooseLogo('${t.id}')">${t.logo_path ? 'Replace logo' : 'Upload logo'}</button>
+        ${t.logo_path ? `<button class="btn btn-ghost btn-sm" onclick="removeLogo('${t.id}', this)">Remove logo</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="openRename('${t.id}')">Rename</button>
+        <button class="btn ${t.active ? 'btn-danger' : 'btn-primary'} btn-sm" onclick="toggleTrust('${t.id}', this)">${t.active ? 'Suspend' : 'Activate'}</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+function fillTrustSelects() {
+  const opts = TRUSTS.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}${t.active ? '' : ' (suspended)'}</option>`).join('');
+  const keep = (id, html) => {
+    const el = document.getElementById(id);
+    const v = el.value;
+    el.innerHTML = html;
+    if ([...el.options].some((o) => o.value === v)) el.value = v;
+  };
+  keep('cuTrust', TRUSTS.length ? opts : '<option value="">Create a trust first</option>');
+  keep('euTrust', opts);
+  keep('userTrustFilter', `<option value="">All trusts</option>${opts}`);
+  keep('actTrust', `<option value="">All trusts</option>${opts}`);
+}
+
+document.getElementById('createTrustForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('newTrustName');
+  const btn = e.submitter;
+  await busy(btn, async () => {
+    try {
+      await callAdmin('create-trust', { name: input.value });
+      input.value = '';
+      await loadTrusts();
+      setAlert('pageAlert', 'Trust created. Upload its logo next.', 'success');
+    } catch (err) { setAlert('pageAlert', err.message); }
+  });
+});
+
+window.chooseLogo = function (trustId) {
+  logoTargetTrust = trustId;
+  const input = document.getElementById('logoFile');
+  input.value = '';
+  input.click();
+};
+
+// Converts any uploaded image to a PNG no wider than 1200px.
+async function imageFileToPng(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('That file could not be read as an image.'));
+      i.src = url;
+    });
+    let w = img.naturalWidth || 600;
+    let h = img.naturalHeight || 200;
+    const scale = Math.min(1, 1200 / w, 600 / h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    return await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+document.getElementById('logoFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file || !logoTargetTrust) return;
+  const trustId = logoTargetTrust;
+  setAlert('pageAlert', 'Uploading logo…', 'info');
+  try {
+    const png = await imageFileToPng(file);
+    if (!png) throw new Error('Could not convert the image.');
+    if (png.size > 1048576) throw new Error('The logo is over 1 MB after conversion. Please use a smaller image.');
+    const path = `${trustId}/logo.png`;
+    const { error } = await supabaseClient.storage.from('trust-logos').upload(path, png, { upsert: true, contentType: 'image/png', cacheControl: '60' });
+    if (error) throw new Error(error.message);
+    await callAdmin('update-trust', { trustId, logoPath: path });
+    await loadTrusts();
+    setAlert('pageAlert', 'Logo updated.', 'success');
+  } catch (err) {
+    setAlert('pageAlert', err.message);
+  }
+});
+
+window.removeLogo = async function (trustId, btn) {
+  if (!await confirmDialog('Remove logo', `Remove the logo for ${trustName(trustId)}? PDFs will be generated without a logo.`, 'Remove')) return;
+  await busy(btn, async () => {
+    try {
+      await callAdmin('update-trust', { trustId, logoPath: null });
+      await loadTrusts();
+    } catch (err) { setAlert('pageAlert', err.message); }
+  });
+};
+
+window.toggleTrust = async function (trustId, btn) {
+  const t = TRUSTS.find((x) => x.id === trustId);
+  if (t.active && !await confirmDialog('Suspend trust', `Suspend ${t.name}? All ${t.user_count} user(s) in this trust will be unable to sign in until it is re-activated.`, 'Suspend')) return;
+  await busy(btn, async () => {
+    try {
+      await callAdmin('update-trust', { trustId, active: !t.active });
+      await loadTrusts();
+      await loadUsers();
+    } catch (err) { setAlert('pageAlert', err.message); }
+  });
+};
+
+window.openRename = function (trustId) {
+  renamingTrust = trustId;
+  document.getElementById('rnName').value = trustName(trustId);
+  setAlert('renameAlert', '');
+  openModal('renameModal');
+};
+
+document.getElementById('renameForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  await busy(e.submitter, async () => {
+    try {
+      await callAdmin('update-trust', { trustId: renamingTrust, name: document.getElementById('rnName').value });
+      closeModal('renameModal');
+      await loadTrusts();
+      renderUsers();
+    } catch (err) { setAlert('renameAlert', err.message); }
+  });
+});
+
+// ── Users ──────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  const { users } = await callAdmin('list-users');
+  USERS = users;
+  renderUsers();
+}
+
+function renderUsers() {
+  const tbody = document.getElementById('userRows');
+  const trustFilter = document.getElementById('userTrustFilter').value;
+  const q = document.getElementById('userSearch').value.trim().toLowerCase();
+  const rows = USERS.filter((u) =>
+    (!trustFilter || u.trust_id === trustFilter) &&
+    (!q || `${u.first_name} ${u.last_name} ${u.user_id}`.toLowerCase().includes(q)));
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">${USERS.length ? 'No users match.' : 'No users yet.'}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map((u) => {
+    const trust = TRUSTS.find((t) => t.id === u.trust_id);
+    let status = u.active ? '<span class="badge badge-on">Active</span>' : '<span class="badge badge-off">Suspended</span>';
+    if (u.active && trust && !trust.active) status = '<span class="badge badge-off">Trust suspended</span>';
+    if (u.must_reset_password) status += ' <span class="badge badge-warn">Awaiting first sign-in</span>';
+    return `
+      <tr>
+        <td><strong>${escapeHtml(u.first_name)} ${escapeHtml(u.last_name)}</strong></td>
+        <td class="mono">${escapeHtml(u.user_id)}</td>
+        <td>${escapeHtml(trustName(u.trust_id))}</td>
+        <td>${status}</td>
+        <td><div class="actions">
+          <button class="btn btn-ghost btn-sm" onclick="openEditUser('${u.id}')">Edit</button>
+          <button class="btn btn-ghost btn-sm" onclick="openReset('${u.id}')">Reset passcode</button>
+          <button class="btn ${u.active ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="toggleUser('${u.id}', this)">${u.active ? 'Suspend' : 'Activate'}</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}', this)">Delete</button>
+        </div></td>
+      </tr>`;
+  }).join('');
+}
+
+document.getElementById('userTrustFilter').addEventListener('change', renderUsers);
+document.getElementById('userSearch').addEventListener('input', renderUsers);
+
+document.getElementById('cuUserId').addEventListener('input', (e) => {
+  e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, '');
+});
+
+document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = {
+    trustId: document.getElementById('cuTrust').value,
+    firstName: document.getElementById('cuFirst').value,
+    lastName: document.getElementById('cuLast').value,
+    userId: document.getElementById('cuUserId').value,
+    passcode: document.getElementById('cuPasscode').value,
+  };
+  await busy(e.submitter, async () => {
+    try {
+      const { user } = await callAdmin('create-user', f);
+      showCredentials(`${user.first_name} ${user.last_name}`, user.user_id, f.passcode);
+      e.target.reset();
+      document.getElementById('cuTrust').value = f.trustId;
+      document.getElementById('cuPasscode').value = makePasscode();
+      await Promise.all([loadUsers(), loadTrusts()]);
+    } catch (err) { setAlert('pageAlert', err.message); }
+  });
+});
+
+function showCredentials(name, userId, passcode) {
+  document.getElementById('credsName').textContent = name;
+  document.getElementById('credsUserId').textContent = userId;
+  document.getElementById('credsPasscode').textContent = passcode;
+  document.getElementById('copyCredsBtn').onclick = async (ev) => {
+    try {
+      await navigator.clipboard.writeText(`User ID: ${userId}\nTemporary passcode: ${passcode}`);
+      ev.target.textContent = 'Copied';
+      setTimeout(() => { ev.target.textContent = 'Copy'; }, 1500);
+    } catch { /* clipboard blocked */ }
+  };
+  openModal('credsModal');
+}
+
+window.openEditUser = function (id) {
+  editingUser = USERS.find((u) => u.id === id);
+  document.getElementById('euFirst').value = editingUser.first_name;
+  document.getElementById('euLast').value = editingUser.last_name;
+  document.getElementById('euTrust').value = editingUser.trust_id;
+  setAlert('editUserAlert', '');
+  openModal('editUserModal');
+};
+
+document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  await busy(e.submitter, async () => {
+    try {
+      await callAdmin('update-user', {
+        id: editingUser.id,
+        firstName: document.getElementById('euFirst').value,
+        lastName: document.getElementById('euLast').value,
+        trustId: document.getElementById('euTrust').value,
+      });
+      closeModal('editUserModal');
+      await Promise.all([loadUsers(), loadTrusts()]);
+    } catch (err) { setAlert('editUserAlert', err.message); }
+  });
+});
+
+window.openReset = function (id) {
+  resettingUser = USERS.find((u) => u.id === id);
+  document.getElementById('resetFor').textContent = `${resettingUser.first_name} ${resettingUser.last_name} (${resettingUser.user_id}) will be asked to choose a new passcode at next sign-in.`;
+  document.getElementById('rpPasscode').value = makePasscode();
+  setAlert('resetAlert', '');
+  openModal('resetModal');
+};
+
+document.getElementById('resetForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const passcode = document.getElementById('rpPasscode').value;
+  await busy(e.submitter, async () => {
+    try {
+      await callAdmin('reset-passcode', { id: resettingUser.id, passcode });
+      closeModal('resetModal');
+      showCredentials(`${resettingUser.first_name} ${resettingUser.last_name}`, resettingUser.user_id, passcode);
+      await loadUsers();
+    } catch (err) { setAlert('resetAlert', err.message); }
+  });
+});
+
+window.toggleUser = async function (id, btn) {
+  const u = USERS.find((x) => x.id === id);
+  await busy(btn, async () => {
+    try {
+      await callAdmin('update-user', { id, active: !u.active });
+      await loadUsers();
+    } catch (err) { setAlert('pageAlert', err.message); }
+  });
+};
+
+window.deleteUser = async function (id, btn) {
+  const u = USERS.find((x) => x.id === id);
+  if (!await confirmDialog('Delete user', `Permanently delete ${u.first_name} ${u.last_name} (${u.user_id})? Their past register records are kept. To stop access temporarily, use Suspend instead.`, 'Delete')) return;
+  await busy(btn, async () => {
+    try {
+      await callAdmin('delete-user', { id });
+      await Promise.all([loadUsers(), loadTrusts()]);
+    } catch (err) { setAlert('pageAlert', err.message); }
+  });
+};
+
+// ── Activity ───────────────────────────────────────────────────────────────
+async function loadActivity() {
+  const tbody = document.getElementById('activityRows');
+  tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Loading…</td></tr>';
+  const payload = { limit: 500 };
+  const v = (id) => document.getElementById(id).value.trim();
+  if (v('actTrust')) payload.trustId = v('actTrust');
+  if (v('actTool')) payload.tool = v('actTool');
+  if (v('actFrom')) payload.from = v('actFrom');
+  if (v('actTo')) payload.to = v('actTo');
+  if (v('actSerial')) payload.serial = v('actSerial');
+  try {
+    const { activity } = await callAdmin('list-activity', payload);
+    ACTIVITY = activity;
+    if (!activity.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No records match.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = activity.map((r) => `
+      <tr>
+        <td style="white-space:nowrap;">${formatDateTimeGB(r.created_at)}</td>
+        <td>${escapeHtml(trustName(r.trust_id))}</td>
+        <td class="${r.tool === 'hnc' ? 'tool-hnc' : 'tool-ss'}">${TOOL_LABELS[r.tool] || r.tool}</td>
+        <td>${r.seq}</td>
+        <td>${escapeHtml(r.dept_code)}</td>
+        <td class="mono">${r.first_serial}</td>
+        <td class="mono">${r.last_serial}</td>
+        <td>${r.sheet_count}</td>
+        <td>${escapeHtml(r.created_by_name)}</td>
+      </tr>`).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-state">${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+document.getElementById('activityFilters').addEventListener('submit', (e) => { e.preventDefault(); loadActivity(); });
+document.getElementById('actSerial').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, ''); });
+
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  if (!ACTIVITY.length) { setAlert('pageAlert', 'Nothing to export. Apply a filter first.'); return; }
+  const cell = (v) => {
+    let s = String(v ?? '');
+    if (/^[=+\-@]/.test(s)) s = `'${s}`;
+    return `"${s.replace(/"/g, '""')}"`;
+  };
+  const header = ['Date', 'Trust', 'Tool', 'Seq', 'Cost centre', 'First serial', 'Last serial', 'Sheets', 'By', 'Session ID'];
+  const lines = ACTIVITY.map((r) => [
+    formatDateTimeGB(r.created_at), trustName(r.trust_id), TOOL_LABELS[r.tool] || r.tool, r.seq,
+    r.dept_code, `="${r.first_serial}"`, `="${r.last_serial}"`, r.sheet_count, r.created_by_name, r.session_id,
+  ].map((v, i) => (i === 5 || i === 6 ? v : cell(v))).join(','));
+  const blob = new Blob([[header.join(','), ...lines].join('\r\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `FP10_Manager_Activity_${formatDateGB().replace(/\//g, '-')}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ── Start ──────────────────────────────────────────────────────────────────
+requirePage('admin').then(async (me) => {
+  document.getElementById('adminName').textContent = me.fullName;
+  document.getElementById('cuPasscode').value = makePasscode();
+  try {
+    await loadTrusts();
+    await loadUsers();
+  } catch (err) {
+    setAlert('pageAlert', err.message);
+  }
+  selectTab(location.hash.slice(1));
+});
+</script>
+</body>
+</html>
